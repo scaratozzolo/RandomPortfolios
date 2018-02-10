@@ -1,6 +1,7 @@
 import datetime as dt
 import matplotlib.pyplot as plt
 from matplotlib import style
+from multiprocessing import Process, Pool
 import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
@@ -8,6 +9,8 @@ import csv
 import random
 import os
 import pickle
+import time
+import tqdm
 
 style.use('ggplot')
 
@@ -18,7 +21,6 @@ if not os.path.exists('Data'):
 #     tickers = pickle.load(f)
 
 tickers = []
-
 for i in os.listdir('TickerData'):
     tickers.append(i[:-4])
 
@@ -78,36 +80,25 @@ def portfolioyear(portfolio):
     return confyears
 
 
-# saved10 = []
-#
-# for i in range(250):
-#     port = randomport(10)
-#     if port not in saved10:
-#         saved10.append(port)
-#
-# for portfolio in saved10:
-#     print(portfolio)
-#     print(portfolioyear(portfolio))
-
 
 graphs_made = 0
 def portfolio(size, to_make):
 
     global graphs_made
-    if not os.path.exists('Data/Portfolio10'):
-        os.makedirs('Data/Portfolio10')
 
-    saved10 = []
+    saved_port = []
 
     changes = {'2017':[], '2012':[], '2008':[], '2003':[]}
 
     for i in range(to_make):
         port = randomport(size)
-        if port not in saved10:
-            saved10.append(port)
+        if port not in saved_port:
+            saved_port.append(port)
 
-    for num, portfolio in enumerate(saved10):
+    for num, portfolio in enumerate(saved_port):
 
+        if not os.path.exists('Data/Portfolio{}'.format(size)):
+            os.makedirs('Data/Portfolio{}'.format(size))
         if not os.path.exists('Data/Portfolio{}/Portfolio{}'.format(size,num)):
             os.makedirs('Data/Portfolio{}/Portfolio{}'.format(size,num))
 
@@ -132,67 +123,98 @@ def portfolio(size, to_make):
             else:
                 main_df = main_df.join(stuff, how='outer')
 
-        for year in YEARS:
-            shares = {}
-            ticker_change = []
 
-            for ticker in stocks:
-                shares[ticker] = int((WEIGHT*STARTING_AMOUNT)/stocks[ticker][str(year)]['Close'].iloc[0])
-                ticker_change.append(shares[ticker]*stocks[ticker][str(year)]['Close'].iloc[stocks[ticker][str(year)]['Close'].count()-1])
+        try:
+            for year in YEARS:
+                shares = {}
+                ticker_change = []
 
-            dates = []
-            dailychanges = []
-            for index, row in main_df[str(year)].iterrows():
-                dates.append(index)
+
+                for ticker in stocks:
+                    shares[ticker] = int((WEIGHT*STARTING_AMOUNT)/stocks[ticker][str(year)]['Close'].iloc[0])
+                    ticker_change.append(shares[ticker]*stocks[ticker][str(year)]['Close'].iloc[stocks[ticker][str(year)]['Close'].count()-1])
+
+
+
+                dates = []
+                dailychanges = []
+                for index, row in main_df[str(year)].iterrows():
+                    dates.append(index)
+                    total = 0
+                    for ticker in portfolio:
+                        total += shares[ticker]*row[ticker]
+                    dailychanges.append(round(((total-STARTING_AMOUNT)/STARTING_AMOUNT)*100, 2))
+                percents = pd.DataFrame({'Date':dates, 'Percent Change':dailychanges})
+                percents.index = percents['Date']
+                percents = percents.drop(['Date'], axis = 1)
+                main_df['Percent Change'] = percents['Percent Change']
+
                 total = 0
-                for ticker in portfolio:
-                    total += shares[ticker]*row[ticker]
-                dailychanges.append(round(((total-STARTING_AMOUNT)/STARTING_AMOUNT)*100, 2))
-            percents = pd.DataFrame({'Date':dates, 'Percent Change':dailychanges})
-            percents.index = percents['Date']
-            percents = percents.drop(['Date'], axis = 1)
-            main_df['Percent Change'] = percents['Percent Change']
-
-            total = 0
-            for i in ticker_change:
-                total += i
-
-            prctchange = round(((total-STARTING_AMOUNT)/STARTING_AMOUNT)*100, 2)
-            changes[year].append(prctchange)
+                for i in ticker_change:
+                    total += i
+                prctchange = round(((total-STARTING_AMOUNT)/STARTING_AMOUNT)*100, 2)
+                changes[year].append(prctchange)
 
 
 
-            plt.figure(figsize=(8, 6), dpi=320)
-            main_df[str(year)]['Percent Change'].plot()
-            plt.title('Percent Return {}'.format(str(year)))
-            plt.tight_layout()
-            plt.savefig(fname='Data/Portfolio{}/Portfolio{}/return-{}-{}.png'.format(size,num,year, num), dpi=320)
-            plt.clf()
-            plt.close()
-            # # plt.show()
-            graphs_made += 1
+                plt.figure(figsize=(8, 6), dpi=320)
+                ax = main_df[str(year)]['Percent Change'].plot()
+                plt.title('Percent Return {}'.format(str(year)))
+                vals = ax.get_yticks()
+                ax.set_yticklabels(['{:3.0f}%'.format(x) for x in vals])
+                plt.tight_layout()
+                plt.savefig(fname='Data/Portfolio{}/Portfolio{}/{}-return-{}.png'.format(size,num,year, num), dpi=320)
+                plt.clf()
+                plt.close()
+                # # plt.show()
+                graphs_made += 1
 
-            no_percent = main_df.drop(['Percent Change'], axis=1)
-            df_corr = no_percent[str(year)].corr()
-            heatmap(df_corr, str(size), num, 'correlation', year)
-            graphs_made += 1
+                no_percent = main_df.drop(['Percent Change'], axis=1)
+                df_corr = no_percent[str(year)].corr()
+                heatmap(df_corr, str(size), num, 'correlation', year)
+                graphs_made += 1
 
-            sp = pd.read_csv('TickerData/SP500.csv', parse_dates=True, index_col=0)
-            sp.drop(['Open','High','Low','Volume'],1,inplace=True)
-            plt.figure(figsize=(8, 6), dpi=320)
-            sp[str(year)]['Close'].plot()
-            plt.title('SPY ETF {}'.format(str(year)))
-            plt.tight_layout()
-            plt.savefig(fname='Data/Portfolio{}/Portfolio{}/SP500-{}.png'.format(size,num,year, num), dpi=320)
-            plt.clf()
-            plt.close()
-            graphs_made += 1
+                sp = pd.read_csv('TickerData/SP500.csv', parse_dates=True, index_col=0)
+                sp.drop(['Open','High','Low','Volume'],1,inplace=True)
+                plt.figure(figsize=(8, 6), dpi=320)
+                sp[str(year)]['Close'].plot()
+                plt.title('SPY ETF {}'.format(str(year)))
+                plt.ylabel('Points')
+                plt.tight_layout()
+                plt.savefig(fname='Data/Portfolio{}/Portfolio{}/{}-SP500.png'.format(size,num,year, num), dpi=320)
+                plt.clf()
+                plt.close()
+                graphs_made += 1
 
-            sp['Percent Return'] = percents['Percent Change']
-            sp_corr = sp.corr()
-            heatmap(sp_corr, str(size), num, 'SPYtoReturnsCorr', year)
-            # print(sp_corr.head())
-            graphs_made += 1
+                sp['Percent Return'] = percents['Percent Change']
+                sp_corr = sp.corr()
+                heatmap(sp_corr, str(size), num, 'SPYtoReturnsCorr', year)
+                # print(sp_corr.head())
+                graphs_made += 1
+        except:
+            print('Error')
+
+
+    maxlen = 0
+    for key in changes:
+        if len(changes[key]) > maxlen:
+            maxlen = len(changes[key])
+    for key in changes:
+        if len(changes[key]) < maxlen:
+            for _ in range(maxlen - len(changes[key])):
+                changes[key].append(0)
+
+
+    changedf = pd.DataFrame.from_dict(changes)
+    changedf.transpose()
+    if changedf.empty:
+        pass
+    else:
+        if not os.path.exists('Returns/Portfolio{}'.format(size)):
+            os.makedirs('Returns/Portfolio{}'.format(size))
+        changedf.replace(0, np.nan)
+        changedf.to_csv('Returns/Portfolio{}/returns.csv'.format(size))
+
 
 
 
@@ -202,7 +224,7 @@ def heatmap(df_corr, port, num, name, year):
     if int(port) < 25:
         fig1 = plt.figure()
     else:
-        fig1 = plt.figure(figsize=(24, 18))
+        fig1 = plt.figure(figsize=(16, 12))
     ax1 = fig1.add_subplot(111)
 
     heatmap1 = ax1.pcolor(data1, cmap=plt.cm.RdYlGn)
@@ -219,7 +241,7 @@ def heatmap(df_corr, port, num, name, year):
     plt.xticks(rotation=90)
     heatmap1.set_clim(-1,1)
     plt.tight_layout()
-    plt.savefig('Data/Portfolio{}/Portfolio{}/{}-{}-{}.png'.format(port,num,name, year, num), dpi = (320))
+    plt.savefig('Data/Portfolio{}/Portfolio{}/{}-{}-{}.png'.format(port,num,year, name, num), dpi = (320))
     plt.clf()
     plt.close()
     # plt.show()
@@ -234,14 +256,33 @@ def cleanup():
                 os.rmdir('Data/{}'.format(dire))
             else:
                 for next_dire in os.listdir('Data/{}'.format(dire)):
-                    if os.listdir('Data/{}/{}'.format(dire, next_dire)) == []:
+                    if os.listdir('Data/{}/{}'.format(dire, next_dire)) == [] :
                         os.rmdir('Data/{}/{}'.format(dire, next_dire))
 
 
-sizes = [3,5,10,25,50,100]
 
-for size in sizes:
-    portfolio(size, 1000)
 
-print('{} graphs made'.format(graphs_made))
-cleanup()
+
+
+
+if __name__ == '__main__':
+    start = time.time()
+    sizes = [3,5,10,25,50,100]
+    processes  = []
+    for size in sizes:
+        portfolio(size, 2000)
+        print('{} graphs made'.format(graphs_made))
+    #     p = Process(target=portfolio, args=(size,20))
+    #     processes.append(p)
+    #
+    # for p in processes:
+    #     p.start()
+    # for p in processes:
+    #     p.join()
+
+    # pool = Pool(processes=4)
+    # results = [pool.apply(portfolio, args=(size,20)) for size in sizes]
+    # print(results)
+
+    print(time.time()-start)
+    cleanup()
