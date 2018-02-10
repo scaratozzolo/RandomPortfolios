@@ -90,9 +90,10 @@ def portfolioyear(portfolio):
 #     print(portfolioyear(portfolio))
 
 
-
+graphs_made = 0
 def portfolio(size, to_make):
 
+    global graphs_made
     if not os.path.exists('Data/Portfolio10'):
         os.makedirs('Data/Portfolio10')
 
@@ -165,15 +166,16 @@ def portfolio(size, to_make):
             main_df[str(year)]['Percent Change'].plot()
             plt.title('Percent Return {}'.format(str(year)))
             plt.tight_layout()
-
             plt.savefig(fname='Data/Portfolio{}/Portfolio{}/return-{}-{}.png'.format(size,num,year, num), dpi=320)
             plt.clf()
             plt.close()
             # # plt.show()
+            graphs_made += 1
 
             no_percent = main_df.drop(['Percent Change'], axis=1)
             df_corr = no_percent[str(year)].corr()
             heatmap(df_corr, str(size), num, 'correlation', year)
+            graphs_made += 1
 
             sp = pd.read_csv('TickerData/SP500.csv', parse_dates=True, index_col=0)
             sp.drop(['Open','High','Low','Volume'],1,inplace=True)
@@ -181,15 +183,18 @@ def portfolio(size, to_make):
             sp[str(year)]['Close'].plot()
             plt.title('SPY ETF {}'.format(str(year)))
             plt.tight_layout()
-
             plt.savefig(fname='Data/Portfolio{}/Portfolio{}/SP500-{}.png'.format(size,num,year, num), dpi=320)
             plt.clf()
             plt.close()
+            graphs_made += 1
 
             sp['Percent Return'] = percents['Percent Change']
             sp_corr = sp.corr()
-            heatmap(sp_corr, size, num, 'SPYtoReturnsCorr', year)
+            heatmap(sp_corr, str(size), num, 'SPYtoReturnsCorr', year)
             # print(sp_corr.head())
+            graphs_made += 1
+
+
 
 
 def heatmap(df_corr, port, num, name, year):
@@ -213,7 +218,6 @@ def heatmap(df_corr, port, num, name, year):
     ax1.set_yticklabels(row_labels)
     plt.xticks(rotation=90)
     heatmap1.set_clim(-1,1)
-
     plt.tight_layout()
     plt.savefig('Data/Portfolio{}/Portfolio{}/{}-{}-{}.png'.format(port,num,name, year, num), dpi = (320))
     plt.clf()
@@ -237,5 +241,7 @@ def cleanup():
 sizes = [3,5,10,25,50,100]
 
 for size in sizes:
-    portfolio(size, 2)
+    portfolio(size, 1000)
+
+print('{} graphs made'.format(graphs_made))
 cleanup()
