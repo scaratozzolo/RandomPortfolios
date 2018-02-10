@@ -17,7 +17,9 @@ if not os.path.exists('TickerData'):
 with open("sp500tickers.pickle","rb") as f:
     tickers = pickle.load(f)
 
-
+tickers = []
+for i in os.listdir('TickerData'):
+    tickers.append(i[:-4])
 
 start = dt.datetime(2002,1,1)
 end = dt.datetime(2017,12,31)
