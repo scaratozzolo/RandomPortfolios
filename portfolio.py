@@ -46,7 +46,10 @@ def randomport(num):
 
 
 
-years = [2017, 2012, 2008, 2003]        #add more years? 1987 finally
+# years = [2017, 2012, 2008, 2003]        #add more years? 1987 finally
+years = [i for i in range(2008, 2018)]
+
+
 def portfolioyear(portfolio):
     """
     Tests all the years in the lists years to see which years have complete data for all stocks in a portfolio
@@ -171,7 +174,7 @@ def portfolio(size, to_make):
                 shares = {}
                 ticker_change = []
 
-                #calculates the number of shares to based on portfolio starting amount and weight defined above
+                #calculates the number of shares based on portfolio starting amount and weight defined above
                 for ticker in stocks:
                     shares[ticker] = int((WEIGHT*STARTING_AMOUNT)/stocks[ticker][str(year)]['Close'].iloc[0])
                     ticker_change.append(shares[ticker]*stocks[ticker][str(year)]['Close'].iloc[stocks[ticker][str(year)]['Close'].count()-1])
@@ -250,10 +253,10 @@ def portfolio(size, to_make):
     if changedf.empty:
         pass
     else:
-        if not os.path.exists('Data/Returns'):
-            os.makedirs('Data/Returns')
+        if not os.path.exists('Data/Returns/Size{}'.format(size)):
+            os.makedirs('Data/Returns/Size{}'.format(size))
         changedf.replace(0, np.nan, inplace=True)
-        changedf.to_csv('Data/Returns/size{}-returns.csv'.format(size))
+        changedf.to_csv('Data/Returns/Size{}/size{}-returns.csv'.format(size, size))
 
 
     #Option 2
@@ -304,10 +307,10 @@ def returnhist(size):
     """Creates histograms for every year for every portfolio size"""
 
 
-    def to_percent(y, position):
+    def to_percent(x, position):
         # Ignore the passed in position. This has the effect of scaling the default
         # tick locations.
-        s = str(y)
+        s = str(x)
 
         # The percent symbol needs escaping in latex
         if matplotlib.rcParams['text.usetex'] is True:
@@ -315,39 +318,38 @@ def returnhist(size):
         else:
             return s + '%'
 
-    for port in os.listdir('Data/Returns/'):
 
-        if os.path.isfile('Data/Returns/size{}-returns.csv'.format(size)):
-            df = pd.read_csv('Data/Returns/size{}-returns.csv'.format(size))
-            df.index = df['Unnamed: 0']
-            df.drop(['Unnamed: 0'], axis= 1, inplace = True)
-            df.index.names = ['Num']
-        else:
-            continue
+    if os.path.isfile('Data/Returns/Size{}/size{}-returns.csv'.format(size,size)):
+        df = pd.read_csv('Data/Returns/Size{}/size{}-returns.csv'.format(size,size))
+        df.index = df['Unnamed: 0']
+        df.drop(['Unnamed: 0'], axis= 1, inplace = True)
+        df.index.names = ['Num']
+    else:
+        return
 
-        for year in years:
-            plt.figure(figsize=(8,6), dpi = 320)
-            plt.hist(df[str(year)], bins = 100, rwidth = .8, range=(-100, 100))
-            plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
-            plt.xlabel('Percentage Return')
-            plt.ylabel('Frequency')
-            formatter = FuncFormatter(to_percent)
-            plt.gca().xaxis.set_major_formatter(formatter)
-            plt.savefig('Data/Returns/size{}-returnhist-{}-small.png'.format(size, str(year)))
-            # plt.show()
-            plt.close()
+    for year in years:
+        plt.figure(figsize=(8,6), dpi = 320)
+        plt.hist(df[str(year)], bins = 100, rwidth = .8, range=(-100, 100))
+        plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
+        plt.xlabel('Percentage Return')
+        plt.ylabel('Frequency')
+        formatter = FuncFormatter(to_percent)
+        plt.gca().xaxis.set_major_formatter(formatter)
+        plt.savefig('Data/Returns/Size{}/size{}-returnhist-{}-small.png'.format(size, size, str(year)))
+        # plt.show()
+        plt.close()
 
-        for year in years:
-            plt.figure(figsize=(8,6), dpi = 320)
-            plt.hist(df[str(year)], bins = 100, rwidth = .8, range = (-100, 700))
-            plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
-            plt.xlabel('Percentage Return')
-            plt.ylabel('Frequency')
-            formatter = FuncFormatter(to_percent)
-            plt.gca().xaxis.set_major_formatter(formatter)
-            plt.savefig('Data/Returns/size{}-returnhist-{}-large.png'.format(size, str(year)))
-            # plt.show()
-            plt.close()
+    for year in years:
+        plt.figure(figsize=(8,6), dpi = 320)
+        plt.hist(df[str(year)], bins = 100, rwidth = .8, range = (-100, 700))
+        plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
+        plt.xlabel('Percentage Return')
+        plt.ylabel('Frequency')
+        formatter = FuncFormatter(to_percent)
+        plt.gca().xaxis.set_major_formatter(formatter)
+        plt.savefig('Data/Returns/Size{}/size{}-returnhist-{}-large.png'.format(size, size, str(year)))
+        # plt.show()
+        plt.close()
 
 
 
@@ -381,8 +383,8 @@ if __name__ == '__main__':
     start = time.time()
     sizes = [3,5,10,25,50,100]
     # processes  = []
-    for size in sizes[-1:]:
-        portfolio(size, 20000)
+    for size in sizes:
+        portfolio(size, 10)
         print('Size {} done'.format(size))
         returnhist(str(size))
     #     p = Process(target=portfolio, args=(size,20))
