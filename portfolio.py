@@ -50,10 +50,10 @@ def randomport(num):
 #
 # plt.savefig(fname='test', dpi=320)
 
-
+years = [2017, 2012, 2008, 2003]        #add more years? 1987 finally
 def portfolioyear(portfolio):
 
-    years = [2017, 2012, 2008, 2003]        #add more years? 1987 finally and then maybe go back to russell
+
     confyears = []
 
     for year in years:
@@ -88,19 +88,31 @@ def portfolio(size, to_make):
 
     saved_port = []
 
-    changes = {'2017':[], '2012':[], '2008':[], '2003':[]}
+    changes = {'2017':[], '2012':[], '2008':[], '2003':[]}      #loop over years from portfolioyear, make both global
 
     for i in range(to_make):
         port = randomport(size)
         if port not in saved_port:
             saved_port.append(port)
 
-    for num, portfolio in enumerate(saved_port):
+    if not os.path.exists('Data/SP500'):
+        os.makedirs('Data/SP500')
 
-        if not os.path.exists('Data/Portfolio{}'.format(size)):
-            os.makedirs('Data/Portfolio{}'.format(size))
-        if not os.path.exists('Data/Portfolio{}/Portfolio{}'.format(size,num)):
-            os.makedirs('Data/Portfolio{}/Portfolio{}'.format(size,num))
+    sp = pd.read_csv('TickerData/SP500.csv', parse_dates=True, index_col=0)
+    sp.drop(['Open','High','Low','Volume'],1,inplace=True)
+
+    for year in years:
+        plt.figure(figsize=(8, 6), dpi=320)
+        sp[str(year)]['Close'].plot()
+        plt.title('SPY ETF {}'.format(str(year)))
+        plt.ylabel('Points')
+        plt.tight_layout()
+        plt.savefig(fname='Data/SP500/{}-SP500.png'.format(year), dpi=320)
+        plt.clf()
+        plt.close()
+        graphs_made += 1
+
+    for num, portfolio in enumerate(saved_port):
 
         STARTING_AMOUNT = 1000000
         WEIGHT = 1/len(portfolio)
@@ -108,6 +120,11 @@ def portfolio(size, to_make):
         YEARS = portfolioyear(portfolio)
         if YEARS == []:
             continue
+
+        if not os.path.exists('Data/Portfolio{}'.format(size)):
+            os.makedirs('Data/Portfolio{}'.format(size))
+        if not os.path.exists('Data/Portfolio{}/Portfolio{}'.format(size,num)):
+            os.makedirs('Data/Portfolio{}/Portfolio{}'.format(size,num))
 
         stocks = {}
         for ticker in portfolio:
@@ -171,24 +188,13 @@ def portfolio(size, to_make):
 
                 no_percent = main_df.drop(['Percent Change'], axis=1)
                 df_corr = no_percent[str(year)].corr()
-                heatmap(df_corr, str(size), num, 'correlation', year)
+                heatmap(df_corr, str(size), num, 'correlation', year, True)
                 graphs_made += 1
 
-                sp = pd.read_csv('TickerData/SP500.csv', parse_dates=True, index_col=0)
-                sp.drop(['Open','High','Low','Volume'],1,inplace=True)
-                plt.figure(figsize=(8, 6), dpi=320)
-                sp[str(year)]['Close'].plot()
-                plt.title('SPY ETF {}'.format(str(year)))
-                plt.ylabel('Points')
-                plt.tight_layout()
-                plt.savefig(fname='Data/Portfolio{}/Portfolio{}/{}-SP500.png'.format(size,num,year, num), dpi=320)
-                plt.clf()
-                plt.close()
-                graphs_made += 1
 
                 sp['Percent Return'] = percents['Percent Change']
                 sp_corr = sp.corr()
-                heatmap(sp_corr, str(size), num, 'SPYtoReturnsCorr', year)
+                heatmap(sp_corr, size, num, 'SPYtoReturnsCorr', year)
                 # print(sp_corr.head())
                 graphs_made += 1
         except:
@@ -212,16 +218,16 @@ def portfolio(size, to_make):
     else:
         if not os.path.exists('Returns/Portfolio{}'.format(size)):
             os.makedirs('Returns/Portfolio{}'.format(size))
-        changedf.replace(0, np.nan)
+        changedf.replace(0, np.nan, inplace=True)
         changedf.to_csv('Returns/Portfolio{}/returns.csv'.format(size))
 
 
 
 
 
-def heatmap(df_corr, port, num, name, year):
+def heatmap(df_corr, port, num, name, year, resize = False):
     data1 = df_corr.values
-    if int(port) < 25:
+    if int(port) < 25 or not resize:
         fig1 = plt.figure()
     else:
         fig1 = plt.figure(figsize=(16, 12))
@@ -269,9 +275,10 @@ if __name__ == '__main__':
     start = time.time()
     sizes = [3,5,10,25,50,100]
     processes  = []
-    for size in sizes:
+    for size in sizes[-1:]:
         portfolio(size, 2000)
         print('{} graphs made'.format(graphs_made))
+        print(time.time()-start)
     #     p = Process(target=portfolio, args=(size,20))
     #     processes.append(p)
     #
@@ -284,5 +291,5 @@ if __name__ == '__main__':
     # results = [pool.apply(portfolio, args=(size,20)) for size in sizes]
     # print(results)
 
-    print(time.time()-start)
+
     cleanup()
