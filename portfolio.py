@@ -5,6 +5,8 @@ from multiprocessing import Process, Pool
 import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
+from matplotlib.ticker import FuncFormatter
+import matplotlib
 import csv
 import random
 import os
@@ -93,7 +95,9 @@ def portfolio(size, to_make):
     global graphs_made
 
     #dictionary of lists for every year to save overall portfolio returns per year, turned into a data frame and csv file later
-    changes = {'2017':[], '2012':[], '2008':[], '2003':[]}      #TODO: loop over years from portfolioyear to create empty lists, make both global
+    changes = {}
+    for year in years:
+        changes[str(year)] = []
 
     #randomly generated portfolios
     saved_port = []
@@ -225,10 +229,35 @@ def portfolio(size, to_make):
         except:
             print('Error')
 
-    #makes all lists in the changes dictionary the same length for data frame purposes
+    #uncommetn whichever is better, or both, I'm just text not a cop
 
+    #Option 1
+    #creates one large csv file for all returns for a portfolio size
+    # #makes all lists in the changes dictionary the same length for data frame purposes
+    #remember returnhist() relies on this one
+    maxlen = 0
+    for key in changes:
+        if len(changes[key]) > maxlen:
+            maxlen = len(changes[key])
+    for key in changes:
+        if len(changes[key]) < maxlen:
+            for _ in range(maxlen - len(changes[key])):
+                changes[key].append(0)
 
     #creates df of percent changes for every portfolio for every year that portfolio had a return
+    changedf = pd.DataFrame.from_dict(changes)
+    changedf.transpose()
+    if changedf.empty:
+        pass
+    else:
+        if not os.path.exists('Data/Returns'):
+            os.makedirs('Data/Returns')
+        changedf.replace(0, np.nan, inplace=True)
+        changedf.to_csv('Data/Returns/size{}-returns.csv'.format(size))
+
+
+    #Option 2
+    #creates individual csv files for each year in portfolio size
     for year in years:
         changedf = pd.DataFrame({str(year):changes[str(year)]})
         if not os.path.exists('Data/Returns/Size{}'.format(size)):
@@ -270,6 +299,58 @@ def heatmap(df_corr, port, num, name, year, resize = False):
     plt.close()
     # plt.show()
 
+
+def returnhist(size):
+    """Creates histograms for every year for every portfolio size"""
+
+
+    def to_percent(y, position):
+        # Ignore the passed in position. This has the effect of scaling the default
+        # tick locations.
+        s = str(y)
+
+        # The percent symbol needs escaping in latex
+        if matplotlib.rcParams['text.usetex'] is True:
+            return s + r'$\%$'
+        else:
+            return s + '%'
+
+    for port in os.listdir('Data/Returns/'):
+
+        if os.path.isfile('Data/Returns/size{}-returns.csv'.format(size)):
+            df = pd.read_csv('Data/Returns/size{}-returns.csv'.format(size))
+            df.index = df['Unnamed: 0']
+            df.drop(['Unnamed: 0'], axis= 1, inplace = True)
+            df.index.names = ['Num']
+        else:
+            continue
+
+        for year in years:
+            plt.figure(figsize=(8,6), dpi = 320)
+            plt.hist(df[str(year)], bins = 100, rwidth = .8, range=(-100, 100))
+            plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
+            plt.xlabel('Percentage Return')
+            plt.ylabel('Frequency')
+            formatter = FuncFormatter(to_percent)
+            plt.gca().xaxis.set_major_formatter(formatter)
+            plt.savefig('Data/Returns/size{}-returnhist-{}-small.png'.format(size, str(year)))
+            # plt.show()
+            plt.close()
+
+        for year in years:
+            plt.figure(figsize=(8,6), dpi = 320)
+            plt.hist(df[str(year)], bins = 100, rwidth = .8, range = (-100, 700))
+            plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
+            plt.xlabel('Percentage Return')
+            plt.ylabel('Frequency')
+            formatter = FuncFormatter(to_percent)
+            plt.gca().xaxis.set_major_formatter(formatter)
+            plt.savefig('Data/Returns/size{}-returnhist-{}-large.png'.format(size, str(year)))
+            # plt.show()
+            plt.close()
+
+
+
 def cleanup():
     """
     Deletes empty directories from Data
@@ -300,9 +381,10 @@ if __name__ == '__main__':
     start = time.time()
     sizes = [3,5,10,25,50,100]
     # processes  = []
-    for size in sizes:
-        portfolio(size, 2000)
+    for size in sizes[-1:]:
+        portfolio(size, 20000)
         print('Size {} done'.format(size))
+        returnhist(str(size))
     #     p = Process(target=portfolio, args=(size,20))
     #     processes.append(p)
     #
