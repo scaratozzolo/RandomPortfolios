@@ -226,25 +226,15 @@ def portfolio(size, to_make):
             print('Error')
 
     #makes all lists in the changes dictionary the same length for data frame purposes
-    maxlen = 0
-    for key in changes:
-        if len(changes[key]) > maxlen:
-            maxlen = len(changes[key])
-    for key in changes:
-        if len(changes[key]) < maxlen:
-            for _ in range(maxlen - len(changes[key])):
-                changes[key].append(0)
+
 
     #creates df of percent changes for every portfolio for every year that portfolio had a return
-    changedf = pd.DataFrame.from_dict(changes)
-    changedf.transpose()
-    if changedf.empty:
-        pass
-    else:
-        if not os.path.exists('Data/Returns'):
-            os.makedirs('Data/Returns')
+    for year in years:
+        changedf = pd.DataFrame({str(year):changes[str(year)]})
+        if not os.path.exists('Data/Returns/Size{}'.format(size)):
+            os.makedirs('Data/Returns/Size{}'.format(size))
         changedf.replace(0, np.nan, inplace=True)
-        changedf.to_csv('Data/Returns/size{}-returns.csv'.format(size))
+        changedf.to_csv('Data/Returns/Size{}/{}-returns.csv'.format(size, year))
 
 
 
