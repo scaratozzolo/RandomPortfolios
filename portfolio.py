@@ -64,7 +64,10 @@ def portfolioyear(portfolio):
         except:
             continue
 
-        #making sure all stocks have the same number of data points for a year, or at least close because I think there may be an issue but not a huge one
+
+
+        #making sure all stocks have the same number of data points for a year
+        conf = True
         for ticker in portfolio:
             df = pd.read_csv('TickerData/{}.csv'.format(ticker), parse_dates=True, index_col=0)
             jandays = df['{}-01'.format(year)]['Close'].count()
@@ -72,12 +75,11 @@ def portfolioyear(portfolio):
             for ticker in portfolio:
                 df1 = pd.read_csv('TickerData/{}.csv'.format(ticker), parse_dates=True, index_col=0)
                 if jandays != df1['{}-01'.format(year)]['Close'].count() or decdays != df1['{}-12'.format(year)]['Close'].count():
-                        break
-                        break
-                        continue    #these lines may be the issue because I dont think this acctually works
+                        conf = False
 
         #if it gets this far then the year is valid or something broke...either way add it to the confirmed years list, confyears
-        confyears.append(str(year))
+        if conf:
+            confyears.append(str(year))
     return confyears
 
 
@@ -125,7 +127,7 @@ def portfolio(size, to_make):
     #perform analysis of every randomly generated portfolio
     for num, portfolio in enumerate(saved_port):
         if num % 100 == 0:
-            print(' . ', end='')
+            print(num)
 
         #portfolio parameters, equal weighting
         STARTING_AMOUNT = 1000000
