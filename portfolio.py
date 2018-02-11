@@ -284,8 +284,7 @@ if __name__ == '__main__':
     processes  = []
     for size in sizes:
         portfolio(size, 2000)
-        print('{} graphs made'.format(graphs_made))
-        print(time.time()-start)
+        print('Size {} done'.format(size))
     #     p = Process(target=portfolio, args=(size,20))
     #     processes.append(p)
     #
@@ -298,5 +297,6 @@ if __name__ == '__main__':
     # results = [pool.apply(portfolio, args=(size,20)) for size in sizes]
     # print(results)
 
-
+    print('{} graphs made'.format(graphs_made))
+    print(time.time()-start)
     cleanup()
