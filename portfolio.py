@@ -102,17 +102,22 @@ def portfolio(size, to_make):
     sp.drop(['Open','High','Low','Volume'],1,inplace=True)
 
     for year in years:
-        plt.figure(figsize=(8, 6), dpi=320)
-        sp[str(year)]['Close'].plot()
-        plt.title('SPY ETF {}'.format(str(year)))
-        plt.ylabel('Points')
-        plt.tight_layout()
-        plt.savefig(fname='Data/SP500/{}-SP500.png'.format(year), dpi=320)
-        plt.clf()
-        plt.close()
-        graphs_made += 1
+        if os.path.isfile('Data/SP500/{}-SP500.png'.format(year)):
+            continue
+        else:
+            plt.figure(figsize=(8, 6), dpi=320)
+            sp[str(year)]['Close'].plot()
+            plt.title('SPY ETF {}'.format(str(year)))
+            plt.ylabel('Points')
+            plt.tight_layout()
+            plt.savefig(fname='Data/SP500/{}-SP500.png'.format(year), dpi=320)
+            plt.clf()
+            plt.close()
+            graphs_made += 1
 
     for num, portfolio in enumerate(saved_port):
+        if num % 100 == 0:
+            print(' . ', end='')
 
         STARTING_AMOUNT = 1000000
         WEIGHT = 1/len(portfolio)
@@ -121,10 +126,10 @@ def portfolio(size, to_make):
         if YEARS == []:
             continue
 
-        if not os.path.exists('Data/Portfolio{}'.format(size)):
-            os.makedirs('Data/Portfolio{}'.format(size))
-        if not os.path.exists('Data/Portfolio{}/Portfolio{}'.format(size,num)):
-            os.makedirs('Data/Portfolio{}/Portfolio{}'.format(size,num))
+        if not os.path.exists('Data/Size{}'.format(size)):
+            os.makedirs('Data/Size{}'.format(size))
+        if not os.path.exists('Data/Size{}/Portfolio{}'.format(size,num)):
+            os.makedirs('Data/Size{}/Portfolio{}'.format(size,num))
 
         stocks = {}
         for ticker in portfolio:
@@ -146,11 +151,9 @@ def portfolio(size, to_make):
                 shares = {}
                 ticker_change = []
 
-
                 for ticker in stocks:
                     shares[ticker] = int((WEIGHT*STARTING_AMOUNT)/stocks[ticker][str(year)]['Close'].iloc[0])
                     ticker_change.append(shares[ticker]*stocks[ticker][str(year)]['Close'].iloc[stocks[ticker][str(year)]['Close'].count()-1])
-
 
 
                 dates = []
@@ -172,7 +175,7 @@ def portfolio(size, to_make):
                 prctchange = round(((total-STARTING_AMOUNT)/STARTING_AMOUNT)*100, 2)
                 changes[year].append(prctchange)
 
-
+                main_df[str(year)].to_csv('Data/Size{}/Portfolio{}/{}-maindf-{}.csv'.format(size,num,year, num))
 
                 plt.figure(figsize=(8, 6), dpi=320)
                 ax = main_df[str(year)]['Percent Change'].plot()
@@ -180,7 +183,7 @@ def portfolio(size, to_make):
                 vals = ax.get_yticks()
                 ax.set_yticklabels(['{:3.0f}%'.format(x) for x in vals])
                 plt.tight_layout()
-                plt.savefig(fname='Data/Portfolio{}/Portfolio{}/{}-return-{}.png'.format(size,num,year, num), dpi=320)
+                plt.savefig(fname='Data/Size{}/Portfolio{}/{}-return-{}.png'.format(size,num,year, num), dpi=320)
                 plt.clf()
                 plt.close()
                 # # plt.show()
@@ -216,10 +219,10 @@ def portfolio(size, to_make):
     if changedf.empty:
         pass
     else:
-        if not os.path.exists('Returns/Portfolio{}'.format(size)):
-            os.makedirs('Returns/Portfolio{}'.format(size))
+        if not os.path.exists('Data/Returns'):
+            os.makedirs('Data/Returns')
         changedf.replace(0, np.nan, inplace=True)
-        changedf.to_csv('Returns/Portfolio{}/returns.csv'.format(size))
+        changedf.to_csv('Data/Returns/size{}-returns.csv'.format(size))
 
 
 
@@ -247,7 +250,7 @@ def heatmap(df_corr, port, num, name, year, resize = False):
     plt.xticks(rotation=90)
     heatmap1.set_clim(-1,1)
     plt.tight_layout()
-    plt.savefig('Data/Portfolio{}/Portfolio{}/{}-{}-{}.png'.format(port,num,year, name, num), dpi = (320))
+    plt.savefig('Data/Size{}/Portfolio{}/{}-{}-{}.png'.format(port,num,year, name, num), dpi = (320))
     plt.clf()
     plt.close()
     # plt.show()
@@ -258,11 +261,15 @@ def cleanup():
         os.rmdir('Data')
     else:
         for dire in os.listdir('Data'):
-            if os.listdir('Data/{}'.format(dire)) == []:
+            if os.path.isfile('Data/{}'.format(dire)):
+                continue
+            elif os.listdir('Data/{}'.format(dire)) == []:
                 os.rmdir('Data/{}'.format(dire))
             else:
                 for next_dire in os.listdir('Data/{}'.format(dire)):
-                    if os.listdir('Data/{}/{}'.format(dire, next_dire)) == [] :
+                    if os.path.isfile('Data/{}/{}'.format(dire,next_dire)):
+                        continue
+                    elif  os.listdir('Data/{}/{}'.format(dire, next_dire)) == [] :
                         os.rmdir('Data/{}/{}'.format(dire, next_dire))
 
 
@@ -275,7 +282,7 @@ if __name__ == '__main__':
     start = time.time()
     sizes = [3,5,10,25,50,100]
     processes  = []
-    for size in sizes[-1:]:
+    for size in sizes:
         portfolio(size, 2000)
         print('{} graphs made'.format(graphs_made))
         print(time.time()-start)
