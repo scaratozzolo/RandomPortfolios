@@ -50,6 +50,7 @@ def randomport(num):
 years = [i for i in range(2008, 2018)]
 
 
+
 def portfolioyear(portfolio):
     """
     Tests all the years in the lists years to see which years have complete data for all stocks in a portfolio
@@ -68,8 +69,6 @@ def portfolioyear(portfolio):
                 df['{}-12'.format(year)]['Close']
         except:
             continue
-
-
 
         #making sure all stocks have the same number of data points for a year
         conf = True
@@ -115,21 +114,6 @@ def portfolio(size, to_make):
     #create a data frame for the SP500 index from csv (SPY ETF)
     sp = pd.read_csv('TickerData/SP500.csv', parse_dates=True, index_col=0)
     sp.drop(['Open','High','Low','Volume'],1,inplace=True)
-
-    #Create a chart of close prices for every year being tested
-    for year in years:
-        if os.path.isfile('Data/SP500/{}-SP500.png'.format(year)):
-            continue
-        else:
-            plt.figure(figsize=(8, 6), dpi=320)
-            sp[str(year)]['Close'].plot()
-            plt.title('SPY ETF {}'.format(str(year)))
-            plt.ylabel('Points')
-            plt.tight_layout()
-            plt.savefig(fname='Data/SP500/{}-SP500.png'.format(year), dpi=320)
-            plt.clf()
-            plt.close()
-            graphs_made += 1
 
     #perform analysis of every randomly generated portfolio
     for num, portfolio in enumerate(saved_port):
@@ -327,7 +311,7 @@ def returnhist(size):
     else:
         return
 
-    for year in years:
+    for year in list(df.columns.values):
         plt.figure(figsize=(8,6), dpi = 320)
         plt.hist(df[str(year)], bins = 100, rwidth = .8, range=(-100, 100))
         plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
@@ -375,16 +359,37 @@ def cleanup():
 
 
 
+def spgraphs():
+    #create a data frame for the SP500 index from csv (SPY ETF)
+    sp = pd.read_csv('TickerData/SP500.csv', parse_dates=True, index_col=0)
+    sp.drop(['Open','High','Low','Volume'],1,inplace=True)
 
+    #Create a chart of close prices for every year being tested
+    for year in years:
+        if os.path.isfile('Data/SP500/{}-SP500.png'.format(year)):
+            continue
+        else:
+            try:
+                plt.figure(figsize=(8, 6), dpi=320)
+                sp[str(year)]['Close'].plot()
+                plt.title('SPY ETF {}'.format(str(year)))
+                plt.ylabel('Points')
+                plt.tight_layout()
+                plt.savefig(fname='Data/SP500/{}-SP500.png'.format(year), dpi=320)
+                plt.clf()
+                plt.close()
+                graphs_made += 1
+            except:
+                print('SP500 graph error')
 
 
 
 if __name__ == '__main__':
     start = time.time()
-    sizes = [3,5,10,25,50,100]
+    sizes = [3,5,10,30,50,100]
     # processes  = []
     for size in sizes:
-        portfolio(size, 10)
+        portfolio(size, 20)
         print('Size {} done'.format(size))
         returnhist(str(size))
     #     p = Process(target=portfolio, args=(size,20))
