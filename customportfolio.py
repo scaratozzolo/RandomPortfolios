@@ -282,55 +282,6 @@ def heatmap(df_corr, port, num, name, year, resize = False):
     # plt.show()
 
 
-def returnhist(size):
-    """Creates histograms for every year for every portfolio size"""
-
-
-    def to_percent(x, position):
-        # Ignore the passed in position. This has the effect of scaling the default
-        # tick locations.
-        s = str(x)
-
-        # The percent symbol needs escaping in latex
-        if matplotlib.rcParams['text.usetex'] is True:
-            return s + r'$\%$'
-        else:
-            return s + '%'
-
-
-    if os.path.isfile('Data/Returns/Size{}/size{}-returns.csv'.format(size,size)):
-        df = pd.read_csv('Data/Returns/Size{}/size{}-returns.csv'.format(size,size))
-        df.index = df['Unnamed: 0']
-        df.drop(['Unnamed: 0'], axis= 1, inplace = True)
-        df.index.names = ['Num']
-    else:
-        return
-
-    for year in list(df.columns.values):
-        plt.figure(figsize=(8,6), dpi = 320)
-        plt.hist(df[str(year)], bins = 100, rwidth = .8, range=(-100, 100))
-        plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
-        plt.xlabel('Percentage Return')
-        plt.ylabel('Frequency')
-        formatter = FuncFormatter(to_percent)
-        plt.gca().xaxis.set_major_formatter(formatter)
-        plt.savefig('Data/Returns/Size{}/size{}-returnhist-{}-small.png'.format(size, size, str(year)))
-        # plt.show()
-        plt.close()
-
-    for year in years:
-        plt.figure(figsize=(8,6), dpi = 320)
-        plt.hist(df[str(year)], bins = 100, rwidth = .8, range = (-100, 700))
-        plt.title('Distribution of Return Frequencies for Portfolio Size {} in {}'.format(size, str(year)))
-        plt.xlabel('Percentage Return')
-        plt.ylabel('Frequency')
-        formatter = FuncFormatter(to_percent)
-        plt.gca().xaxis.set_major_formatter(formatter)
-        plt.savefig('Data/Returns/Size{}/size{}-returnhist-{}-large.png'.format(size, size, str(year)))
-        # plt.show()
-        plt.close()
-
-
 
 def cleanup():
     """
